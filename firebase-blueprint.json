@@ -1,0 +1,33 @@
+{
+  "entities": {
+    "UserConfig": {
+      "title": "User LinkHub Configuration",
+      "description": "Personal configuration and link directory for a user",
+      "type": "object",
+      "properties": {
+        "folders": {
+          "type": "array",
+          "description": "Recursive structure of folders and links"
+        },
+        "appearance": {
+          "type": "object",
+          "properties": {
+            "theme": { "type": "string", "enum": ["light", "dark", "glass"] },
+            "displayName": { "type": "string" },
+            "background": { "type": "string" }
+          },
+          "required": ["theme"]
+        },
+        "userId": { "type": "string", "description": "The UID of the owner" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["folders", "appearance", "userId", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "UserConfig",
+      "description": "Stored configuration for each user"
+    }
+  }
+}
