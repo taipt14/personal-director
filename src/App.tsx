@@ -84,6 +84,7 @@ export default function App() {
   const [navigationPath, setNavigationPath] = useState<string[]>([]); // Array of Folder IDs
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false);
 
   // Load config from Firestore
   useEffect(() => {
@@ -116,6 +117,7 @@ export default function App() {
           appearance: data.appearance || DEFAULT_CONFIG.appearance
         };
         setConfig(newConfig);
+        setHasLoadedInitialData(true);
       }
     }, (err) => {
       console.error('Real-time sync failed', err);
@@ -126,6 +128,7 @@ export default function App() {
 
   // Save config to Firestore
   const saveToFirebase = useCallback(async (newConfig: Config) => {
+    if (!hasLoadedInitialData) return;
     setIsSyncing(true);
     try {
       const publicDocRef = doc(db, 'configs', 'public');
@@ -141,7 +144,7 @@ export default function App() {
       // Small delay to show the "Synced" state
       setTimeout(() => setIsSyncing(false), 500);
     }
-  }, []);
+  }, [hasLoadedInitialData]);
 
   // Helper to update config and sync
   const updateConfig = useCallback((updater: (prev: Config) => Config) => {

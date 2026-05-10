@@ -4,7 +4,7 @@ service cloud.firestore {
     
     // 0. Global Safety Net
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if true;
     }
 
     // Primitives
