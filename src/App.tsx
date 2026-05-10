@@ -29,44 +29,10 @@ import { db, handleFirestoreError, OperationType } from './lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 
 const DEFAULT_CONFIG: Config = {
-  folders: [
-    {
-      id: '1',
-      title: 'Học tập',
-      icon: 'BookOpen',
-      links: [
-        { id: '1-1', label: 'Google Search', url: 'https://google.com' },
-        { id: '1-2', label: 'Wikipedia', url: 'https://wikipedia.org' }
-      ],
-      folders: [],
-      color: '#3B82F6'
-    },
-    {
-      id: '2',
-      title: 'Work',
-      icon: 'Briefcase',
-      links: [
-        { id: '2-1', label: 'GitHub', url: 'https://github.com' },
-        { id: '2-2', label: 'Notion', url: 'https://notion.so' }
-      ],
-      folders: [
-        {
-          id: '2-3',
-          title: 'Dự án A',
-          icon: 'Folder',
-          links: [
-            { id: '2-3-1', label: 'Tài liệu', url: 'https://docs.google.com' }
-          ],
-          folders: [],
-          color: '#10B981'
-        }
-      ],
-      color: '#10B981'
-    }
-  ],
+  folders: [],
   appearance: {
     theme: 'glass',
-    displayName: 'LinkHub Public'
+    displayName: 'DXO Summary'
   }
 };
 
