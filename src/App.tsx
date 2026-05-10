@@ -28,8 +28,6 @@ import { Config, Folder, Link } from './types';
 import { db, handleFirestoreError, OperationType } from './lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 
-const STORAGE_KEY = 'linkhub_public_config';
-
 const DEFAULT_CONFIG: Config = {
   folders: [
     {
@@ -81,22 +79,7 @@ const migrateFolders = (folders: Folder[]): Folder[] => {
 };
 
 export default function App() {
-  const [config, setConfig] = useState<Config>(() => {
-    // Try to load from localStorage for instant display
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return {
-          folders: migrateFolders(parsed.folders),
-          appearance: parsed.appearance || DEFAULT_CONFIG.appearance
-        };
-      } catch (e) {
-        return DEFAULT_CONFIG;
-      }
-    }
-    return DEFAULT_CONFIG;
-  });
+  const [config, setConfig] = useState<Config>(DEFAULT_CONFIG);
   const [isEditMode, setIsEditMode] = useState(false);
   const [navigationPath, setNavigationPath] = useState<string[]>([]); // Array of Folder IDs
   const [isSyncing, setIsSyncing] = useState(false);
@@ -133,8 +116,6 @@ export default function App() {
           appearance: data.appearance || DEFAULT_CONFIG.appearance
         };
         setConfig(newConfig);
-        // Sync cache
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
       }
     }, (err) => {
       console.error('Real-time sync failed', err);
@@ -148,8 +129,6 @@ export default function App() {
     setIsSyncing(true);
     try {
       const publicDocRef = doc(db, 'configs', 'public');
-      // Update cache immediately
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
       
       await setDoc(publicDocRef, {
         folders: newConfig.folders,
