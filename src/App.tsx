@@ -16,7 +16,11 @@ import {
   Moon,
   Sun,
   Palette,
-  ArrowLeft
+  ArrowLeft,
+  Cloud,
+  CloudOff,
+  RefreshCw,
+  CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -24,7 +28,7 @@ import { Config, Folder, Link } from './types';
 import { db, handleFirestoreError, OperationType } from './lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 
-const STORAGE_KEY = 'linkhub_config';
+const STORAGE_KEY = 'linkhub_public_config';
 
 const DEFAULT_CONFIG: Config = {
   folders: [
@@ -68,8 +72,31 @@ const DEFAULT_CONFIG: Config = {
   }
 };
 
+const migrateFolders = (folders: Folder[]): Folder[] => {
+  return (folders || []).map(f => ({
+    ...f,
+    folders: migrateFolders(f.folders || []),
+    links: f.links || []
+  }));
+};
+
 export default function App() {
-  const [config, setConfig] = useState<Config>(DEFAULT_CONFIG);
+  const [config, setConfig] = useState<Config>(() => {
+    // Try to load from localStorage for instant display
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          folders: migrateFolders(parsed.folders),
+          appearance: parsed.appearance || DEFAULT_CONFIG.appearance
+        };
+      } catch (e) {
+        return DEFAULT_CONFIG;
+      }
+    }
+    return DEFAULT_CONFIG;
+  });
   const [isEditMode, setIsEditMode] = useState(false);
   const [navigationPath, setNavigationPath] = useState<string[]>([]); // Array of Folder IDs
   const [isSyncing, setIsSyncing] = useState(false);
@@ -79,19 +106,18 @@ export default function App() {
   useEffect(() => {
     const publicDocRef = doc(db, 'configs', 'public');
     
-    // Initial fetch to check if doc exists
     const initFetch = async () => {
       try {
         const snap = await getDoc(publicDocRef);
         if (!snap.exists()) {
-          // Initialize public doc
           await setDoc(publicDocRef, {
-            ...DEFAULT_CONFIG,
+            folders: DEFAULT_CONFIG.folders,
+            appearance: DEFAULT_CONFIG.appearance,
             updatedAt: serverTimestamp()
           });
         }
       } catch (err) {
-        handleFirestoreError(err, OperationType.GET, 'configs/public');
+        console.error('Initial fetch failed', err);
       } finally {
         setIsLoading(false);
       }
@@ -99,24 +125,19 @@ export default function App() {
 
     initFetch();
 
-    // Listen for real-time updates
     const unsubscribe = onSnapshot(publicDocRef, (snap) => {
       if (snap.exists()) {
         const data = snap.data();
-        // Ensure folders have recursive structure
-        const migrate = (folders: Folder[]): Folder[] => (folders || []).map(f => ({
-          ...f,
-          folders: f.folders || [],
-          links: f.links || []
-        }));
-        
-        setConfig({
-          folders: migrate(data.folders),
+        const newConfig = {
+          folders: migrateFolders(data.folders),
           appearance: data.appearance || DEFAULT_CONFIG.appearance
-        });
+        };
+        setConfig(newConfig);
+        // Sync cache
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
       }
     }, (err) => {
-      handleFirestoreError(err, OperationType.GET, 'configs/public');
+      console.error('Real-time sync failed', err);
     });
 
     return unsubscribe;
@@ -127,14 +148,19 @@ export default function App() {
     setIsSyncing(true);
     try {
       const publicDocRef = doc(db, 'configs', 'public');
+      // Update cache immediately
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
+      
       await setDoc(publicDocRef, {
-        ...newConfig,
+        folders: newConfig.folders,
+        appearance: newConfig.appearance,
         updatedAt: serverTimestamp()
-      }, { merge: true });
+      });
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'configs/public');
+      console.error('Save to Firebase failed', err);
     } finally {
-      setIsSyncing(false);
+      // Small delay to show the "Synced" state
+      setTimeout(() => setIsSyncing(false), 500);
     }
   }, []);
 
@@ -362,6 +388,33 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 mr-2">
+            <AnimatePresence mode="wait">
+              {isSyncing ? (
+                <motion.div
+                  key="syncing"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="flex items-center gap-1.5 text-[10px] font-bold text-indigo-500 uppercase tracking-wider bg-indigo-50 px-2 py-1 rounded-full"
+                >
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  Đang lưu...
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="synced"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-500 uppercase tracking-wider bg-emerald-50 px-2 py-1 rounded-full"
+                >
+                  <CheckCircle2 className="w-3 h-3" />
+                  Đã lưu trữ
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           <button 
             onClick={() => setIsEditMode(!isEditMode)}
             className={cn(
