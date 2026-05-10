@@ -80,7 +80,10 @@ export default function App() {
         const data = snap.data();
         const newConfig = {
           folders: migrateFolders(data.folders),
-          appearance: data.appearance || DEFAULT_CONFIG.appearance
+          appearance: {
+            ...(data.appearance || DEFAULT_CONFIG.appearance),
+            displayName: data.appearance?.displayName === 'LinkHub Public' ? 'DXO Summary' : (data.appearance?.displayName || 'DXO Summary')
+          }
         };
         setConfig(newConfig);
         setHasLoadedInitialData(true);
@@ -394,18 +397,25 @@ export default function App() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase">Đang chỉnh sửa</label>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">
+                          {activeFolder ? "Đang chỉnh sửa thư mục" : "Tên ứng dụng"}
+                        </label>
                       </div>
                       <input 
                         type="text" 
-                        value={activeFolder?.title || "Gốc (Root)"}
-                        readOnly={!activeFolder}
-                        onChange={(e) => activeFolder && updateFolder(activeFolder.id, { title: e.target.value })}
-                        className={cn(
-                          "bg-transparent text-3xl font-black focus:outline-none w-full",
-                          !activeFolder && "opacity-50"
-                        )}
-                        placeholder="Tiêu đề thư mục"
+                        value={activeFolder ? activeFolder.title : config.appearance.displayName}
+                        onChange={(e) => {
+                          if (activeFolder) {
+                            updateFolder(activeFolder.id, { title: e.target.value });
+                          } else {
+                            updateConfig(prev => ({
+                              ...prev,
+                              appearance: { ...prev.appearance, displayName: e.target.value }
+                            }));
+                          }
+                        }}
+                        className="bg-transparent text-3xl font-black focus:outline-none w-full"
+                        placeholder={activeFolder ? "Tiêu đề thư mục" : "Tên ứng dụng"}
                       />
                     </div>
                   </div>
