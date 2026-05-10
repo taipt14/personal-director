@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "gen-lang-client-0439271073"
-  }
+  },
+  "targets": {
+    "gen-lang-client-0439271073": {
+      "hosting": {
+        "dxosummary": [
+          "dxosummary"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
