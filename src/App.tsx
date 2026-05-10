@@ -16,18 +16,13 @@ import {
   Moon,
   Sun,
   Palette,
-  ArrowLeft,
-  LogOut,
-  User as UserIcon
+  ArrowLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import { Config, Folder, Link } from './types';
-import { useAuth } from './context/AuthContext';
-import { Auth } from './components/Auth';
-import { auth, db, handleFirestoreError, OperationType } from './lib/firebase';
+import { db, handleFirestoreError, OperationType } from './lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
-import { signOut } from 'firebase/auth';
 
 const STORAGE_KEY = 'linkhub_config';
 
@@ -69,44 +64,43 @@ const DEFAULT_CONFIG: Config = {
   ],
   appearance: {
     theme: 'glass',
-    displayName: 'DXO summary'
+    displayName: 'LinkHub Public'
   }
 };
 
 export default function App() {
-  const { user, loading: authLoading } = useAuth();
   const [config, setConfig] = useState<Config>(DEFAULT_CONFIG);
   const [isEditMode, setIsEditMode] = useState(false);
   const [navigationPath, setNavigationPath] = useState<string[]>([]); // Array of Folder IDs
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Load config from Firestore
   useEffect(() => {
-    if (!user) return;
-
-    const userDocRef = doc(db, 'users', user.uid);
+    const publicDocRef = doc(db, 'configs', 'public');
     
     // Initial fetch to check if doc exists
     const initFetch = async () => {
       try {
-        const snap = await getDoc(userDocRef);
+        const snap = await getDoc(publicDocRef);
         if (!snap.exists()) {
-          // Initialize for new user
-          await setDoc(userDocRef, {
+          // Initialize public doc
+          await setDoc(publicDocRef, {
             ...DEFAULT_CONFIG,
-            userId: user.uid,
             updatedAt: serverTimestamp()
           });
         }
       } catch (err) {
-        handleFirestoreError(err, OperationType.GET, `users/${user.uid}`);
+        handleFirestoreError(err, OperationType.GET, 'configs/public');
+      } finally {
+        setIsLoading(false);
       }
     };
 
     initFetch();
 
     // Listen for real-time updates
-    const unsubscribe = onSnapshot(userDocRef, (snap) => {
+    const unsubscribe = onSnapshot(publicDocRef, (snap) => {
       if (snap.exists()) {
         const data = snap.data();
         // Ensure folders have recursive structure
@@ -122,29 +116,27 @@ export default function App() {
         });
       }
     }, (err) => {
-      handleFirestoreError(err, OperationType.GET, `users/${user.uid}`);
+      handleFirestoreError(err, OperationType.GET, 'configs/public');
     });
 
     return unsubscribe;
-  }, [user]);
+  }, []);
 
   // Save config to Firestore
   const saveToFirebase = useCallback(async (newConfig: Config) => {
-    if (!user) return;
     setIsSyncing(true);
     try {
-      const userDocRef = doc(db, 'users', user.uid);
-      await setDoc(userDocRef, {
+      const publicDocRef = doc(db, 'configs', 'public');
+      await setDoc(publicDocRef, {
         ...newConfig,
-        userId: user.uid,
         updatedAt: serverTimestamp()
       }, { merge: true });
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`);
+      handleFirestoreError(err, OperationType.WRITE, 'configs/public');
     } finally {
       setIsSyncing(false);
     }
-  }, [user]);
+  }, []);
 
   // Helper to update config and sync
   const updateConfig = useCallback((updater: (prev: Config) => Config) => {
@@ -155,21 +147,13 @@ export default function App() {
     });
   }, [saveToFirebase]);
 
-  if (authLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-          <p className="text-slate-500 font-medium animate-pulse">Đang tải cấu hình...</p>
+          <p className="text-slate-500 font-medium animate-pulse">Đang tải dữ liệu công khai...</p>
         </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <Auth />
       </div>
     );
   }
@@ -378,24 +362,6 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="hidden md:flex flex-col items-end mr-2">
-            <span className="text-xs font-bold text-slate-900 truncate max-w-[150px]">
-              {user.displayName || user.email}
-            </span>
-            <button 
-              onClick={() => signOut(auth)}
-              className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 uppercase"
-            >
-              Đăng xuất
-            </button>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-200 overflow-hidden">
-            {user.photoURL ? (
-              <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            ) : (
-              <UserIcon className="w-5 h-5" />
-            )}
-          </div>
           <button 
             onClick={() => setIsEditMode(!isEditMode)}
             className={cn(

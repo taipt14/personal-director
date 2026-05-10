@@ -39,19 +39,12 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow get: if isValidId(userId) && isOwner(userId);
-      
-      allow create: if isValidId(userId) && isOwner(userId) 
-        && isValidUserConfig(incoming())
-        && incoming().updatedAt == request.time;
-      
-      allow update: if isValidId(userId) && isOwner(userId)
-        && isValidUserConfig(incoming())
-        && incoming().userId == existing().userId
-        && incoming().updatedAt == request.time
-        && incoming().diff(existing()).affectedKeys().hasOnly(['folders', 'appearance', 'updatedAt']);
-      
-      allow delete: if isValidId(userId) && isOwner(userId);
+      allow read, write: if true;
+    }
+
+    // Default configuration for public access
+    match /configs/public {
+      allow read, write: if true;
     }
   }
 }
