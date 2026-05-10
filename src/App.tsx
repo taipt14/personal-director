@@ -650,7 +650,7 @@ export default function App() {
       <footer className="mt-auto border-t border-slate-200/50 p-8">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <span>© {new Date().getFullYear()} LinkHub</span>
+            <span>© {new Date().getFullYear()} DXO Summary</span>
             <span className="opacity-30">•</span>
             <span>Tối ưu cho công việc và học tập</span>
           </div>
